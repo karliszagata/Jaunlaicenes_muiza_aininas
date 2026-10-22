@@ -40,18 +40,18 @@ jobs:
             ~/.buildozer
           key: buildozer-${{ hashFiles('buildozer.spec') }}
 
-      -          - name: Build APK
-           run: |
-             set -o pipefail
-             buildozer -v android debug 2>&1 | tee build.log
+      - name: Build APK
+        run: |
+          set -o pipefail
+          buildozer -v android debug 2>&1 | tee build.log
 
-         - name: Show errors
-           if: failure()
-           run: |
-             echo "=== Pēdējās rindas ==="
-             tail -n 40 build.log
-             echo "=== Rindas ar kļūdām ==="
-             grep -n -i -E "error|failed|fatal|not found" build.log | tail -n 40
+      - name: Show errors
+        if: failure()
+        run: |
+          echo "=== Pēdējās rindas ==="
+          tail -n 40 build.log
+          echo "=== Rindas ar kļūdām ==="
+          grep -n -i -E "error|failed|fatal|not found" build.log | tail -n 40
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
