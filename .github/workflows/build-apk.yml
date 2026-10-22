@@ -2,8 +2,6 @@ name: Build APK
 
 on:
   workflow_dispatch:
-  push:
-    branches: [main, master]
 
 jobs:
   build:
@@ -11,6 +9,7 @@ jobs:
     timeout-minutes: 120
     steps:
       - uses: actions/checkout@v4
+
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
@@ -23,7 +22,7 @@ jobs:
       - name: Install system packages
         run: |
           sudo apt-get update
-          sudo apt-get install -y git zip unzip autoconf automake libtool pkg-config \
+          sudo apt-get install -y git zip unzip autoconf automake libtool libltdl-dev pkg-config \
             zlib1g-dev libncurses-dev cmake libffi-dev libssl-dev build-essential ccache
 
       - name: Install Buildozer
@@ -31,26 +30,27 @@ jobs:
           python -m pip install --upgrade pip
           pip install cython==0.29.36 buildozer==1.5.0 virtualenv
 
-      - name: Cache Buildozer
-        uses: actions/cache@v4
-        with:
-          path: |
-            .buildozer
-            ~/.buildozer
-          key: buildozer-${{ hashFiles('buildozer.spec') }}
-
       - name: Build APK
         run: |
           set -o pipefail
           buildozer -v android debug 2>&1 | tee build.log
 
-      - name: Show errors
-        if: failure()
+      - name: Extract errors
+        if: always()
         run: |
-          echo "=== Pēdējās rindas ==="
-          tail -n 40 build.log
-          echo "=== Rindas ar kļūdām ==="
-          grep -n -i -E "error|failed|fatal|not found" build.log | tail -n 40
+          python extract_errors.py > summary.txt || true
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+          tail -n 200 summary.txt >> "$GITHUB_STEP_SUMMARY"
+          echo '```' >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Upload logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-logs
+          path: |
+            build.log
+            errors.txt
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
